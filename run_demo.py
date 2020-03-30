@@ -72,7 +72,7 @@ def layout_ocr(img_folder, out_folder='part1_output'):
 
 # ===============================================================================
 print("Layout - OCR ... ")
-# layout_ocr(img_folder, layout_ocr_folder)
+layout_ocr(img_folder, layout_ocr_folder)
 print("Organizing ... ")
 list_files = sorted(os.listdir(layout_ocr_folder))
 print(list_files)
