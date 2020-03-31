@@ -7,5 +7,12 @@
 
 - Result : nhu l 
 
-- Cần add thêm leveinshtein sau OCR trước khi đưa vào graph - explainer
+- Updated :
+	
+	
+	// hieutt99
+	- run_demo to run full flow
+	- run_gcn to run gcn - explainer from the dataset
+	- demo_layout-ocr to run layout-ocr
+
 

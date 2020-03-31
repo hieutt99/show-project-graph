@@ -6,7 +6,7 @@ import sys
 import os
 # =================================================================
 from torch.utils.data import DataLoader
-from graph.dataloader import demo_preprocess, get_page_demo
+from graph.dataloader import demo_preprocess, get_page_demo, data_process, ToTensor
 from graph.layers import GraphConvolution
 from graph.model import GCN
 import torch.nn as nn
@@ -29,6 +29,12 @@ img_folder = './images'
 layout_ocr_folder = './part1_output'
 
 list_images = sorted(os.listdir('./images'))
+
+with open('./data/train_list.json','r') as fp:
+	train_list = json.load(fp)
+print(train_list[1])
+
+dataset = data_process(data_list = train_list[1:2], transform = ToTensor())
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def layout_ocr(img_folder, out_folder='part1_output'):
@@ -71,13 +77,13 @@ def layout_ocr(img_folder, out_folder='part1_output'):
 		label_file.close()
 
 # ===============================================================================
-print("Layout - OCR ... ")
-layout_ocr(img_folder, layout_ocr_folder)
-print("Organizing ... ")
-list_files = sorted(os.listdir(layout_ocr_folder))
-print(list_files)
+# print("Layout - OCR ... ")
+# # layout_ocr(img_folder, layout_ocr_folder)
+# print("Organizing ... ")
+# list_files = sorted(os.listdir(layout_ocr_folder))
+# print(list_files)
 
-graph_dataset = demo_preprocess(data_list = list_files[1:2])
+# graph_dataset = demo_preprocess(data_list = list_files[1:2])
 
 # for i, batch in enumerate(graph_dataset):
 # 	print(batch[0].size(), batch[1].size())
@@ -146,13 +152,13 @@ TEST_ID = 'X00016469612'
 explainer = GNNExplainer(model, epochs=200, lr=0.01)
 
 # ==============================================
-list_id = []
-for item in list_files:
-	list_id.append(item[:-4])
-list_id = sorted(list_id)
+# list_id = []
+# for item in list_files:
+# 	list_id.append(item[:-4])
+# list_id = sorted(list_id)
 # ==============================================
 
-for i_test, (sample, name) in enumerate(zip(graph_dataset, list_id)):
+for i_test, (sample, name) in enumerate(zip(dataset, train_list[1:2])):
 	# if i_test not in WANT_TO_TEST: continue
 
 	# todo: Load pre-processed data
@@ -162,7 +168,7 @@ for i_test, (sample, name) in enumerate(zip(graph_dataset, list_id)):
 		edge_index (Tensor): 2 x number_of_edges
 		edge_type (Tensor): number_of_edges
 	"""
-	[V, A] = sample
+	[V, A], label = sample
 	edge_index, edge_type = convert_adj_to_edge_index(A)
 	# print(edge_index)
 
@@ -183,7 +189,7 @@ for i_test, (sample, name) in enumerate(zip(graph_dataset, list_id)):
 	print("With respective label: ", values_of_nodes_to_explained)
 
 	# todo: explain each nodes
-	vis = imageVisualizer(name)        # change the ID of the test here!!!
+	vis = imageVisualizer_temp(name)        # change the ID of the test here!!!
 	edge_threshold = 0.9
 
 	for node_id in indeces_of_nodes_to_explained:

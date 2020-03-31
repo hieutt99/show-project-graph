@@ -12,9 +12,10 @@ class GNNExplainer(torch.nn.Module):
     coeffs = {
         'log_logits': 1.0,
         'edge_size': 0.005,
-        'node_feat_size': 1.0,
+        'node_feat_size': 0.03,
         'edge_ent': 1.0,
-        'node_feat_ent': 0.1,
+        'node_feat_ent': 1.0,
+        'lap': 0.5,
     }
 
     def __init__(self, model, epochs=100, lr=0.01, log=True, num_hop=2):
@@ -54,6 +55,7 @@ class GNNExplainer(torch.nn.Module):
         Q.put((x, 0))
         visited = np.zeros(N)
         visited[x] = 1
+        hard_edge_mask = torch.zeros(num_edges).long()
         while not Q.empty():
             (u, depth) = Q.get()
             if depth >= self.num_hop: continue
@@ -61,21 +63,17 @@ class GNNExplainer(torch.nn.Module):
                 if u != int(edge_index[1][i]) and u != int(edge_index[0][i]): continue
                 v = int(edge_index[0][i])
                 if u == v: v = int(edge_index[1][i])
+                hard_edge_mask[i] = True
                 if visited[v] == 0:
                     visited[v] = 1
                     Q.put((v, depth + 1))
 
         subset = torch.from_numpy(np.asarray(np.where(visited == 1)).flatten())
         chosen_node = V[subset, :]
-        hard_edge_mask = np.zeros(num_edges)
-        for i in range(num_edges):
-            u, v = edge_index[0][i], edge_index[1][i]
-            if visited[u] and visited[v]: hard_edge_mask[i] = 1
 
         list_edge_index = torch.from_numpy(np.asarray(np.where(hard_edge_mask == 1)).flatten())
         chosen_edge_index = edge_index[:, list_edge_index]
         chosen_edge_type = edge_type[list_edge_index]
-        hard_edge_mask = torch.from_numpy(hard_edge_mask).long()
 
         node_new_id = np.zeros(N)
         for i in range(subset.size(0)):
@@ -94,18 +92,37 @@ class GNNExplainer(torch.nn.Module):
         #print(chosen_edge_index)
         return chosen_node, adj_mat_new, chosen_edge_index, chosen_edge_type, hard_edge_mask
 
-    def __loss__(self, node_idx, log_logits, pred_label):
+    def __loss__(self, node_idx, log_logits, pred_label, A_masked=None, num_edge=None):
         loss = self.coeffs['log_logits'] * -log_logits[node_idx, pred_label[node_idx]]
+        #print("\nLog loss: ", self.coeffs['log_logits'] * -log_logits[node_idx, pred_label[node_idx]])
 
         m = self.edge_mask.sigmoid()
         loss = loss + self.coeffs['edge_size'] * m.sum()
+        #print("Edge size loss: ", self.coeffs['edge_size'] * m.sum())
+
         ent = -m * torch.log(m + EPS) - (1 - m) * torch.log(1 - m + EPS)
         loss = loss + self.coeffs['edge_ent'] * ent.mean()
+        #print("Edge entropy loss: ", self.coeffs['edge_ent'] * ent.mean())
 
         m = self.node_feat_mask.sigmoid()
         loss = loss + self.coeffs['node_feat_size'] * m.sum()
+        #print("Feature size loss: ", self.coeffs['node_feat_size'] * m.sum())
+
         ent = -m * torch.log(m + EPS) - (1 - m) * torch.log(1 - m + EPS)
         loss = loss + self.coeffs['node_feat_ent'] * ent.mean()
+        #print("Feature entropy loss: ", self.coeffs['node_feat_ent'] * ent.mean())
+        # laplacian loss
+        lap_loss = 0
+        """
+        for type in range(A_masked.size(0)):
+            D = torch.diag(torch.sum(A_masked[type], 0))
+            L = D - A_masked[type]
+            pred_label_t = torch.tensor(pred_label, dtype=torch.float)
+            lap_loss = lap_loss + (pred_label_t @ L @ pred_label_t) / num_edge
+        loss = loss + self.coeffs['lap'] * lap_loss
+        """
+        #print("Lap loss: ", self.coeffs['lap'] * lap_loss)
+
         return loss
 
     def explain_node(self, node_idx, V, A):
@@ -151,15 +168,15 @@ class GNNExplainer(torch.nn.Module):
 
 
             log_logits = self.model.eval([V_masked, A_masked])[0]
-            loss = self.__loss__(0, log_logits, pred_label)
+            loss = self.__loss__(0, log_logits, pred_label, A_masked, num_edges)
             loss.backward()
             optimizer.step()
 
 
-            #if (epoch % 30 == 0):
-                #print('\n')
-                #print("Loss:  ", loss)
-            #    print("MIN, MAX, SUM, feature_mask: ", self.node_feat_mask.min(), self.node_feat_mask.max(), self.node_feat_mask.sum())
+            if (epoch % 30 == 0):
+                print('\n')
+                print("Loss:  ", loss)
+                #print("MIN, MAX, SUM, feature_mask: ", self.node_feat_mask.min(), self.node_feat_mask.max(), self.node_feat_mask.sum())
 
             if self.log:  # pragma: no cover
                 pbar.update(1)

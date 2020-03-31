@@ -6,7 +6,7 @@ import sys
 import os
 
 
-def main(img_folder, out_folder='part1_output'):
+def main(img_folder = './images', out_folder='part1_output'):
     if not os.path.exists(out_folder):
         os.makedirs(out_folder)
 

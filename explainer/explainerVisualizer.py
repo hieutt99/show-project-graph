@@ -106,5 +106,65 @@ class imageVisualizer(object):
 			for feature_id in self.features[label]:
 				all = all + self.vocab[feature_id] + ", "
 			print("Features strongly influenced " + self.labels[label] + ": " + all)
-	# def save_image(self):
-	# 	cv2.imwrite("./explained_output/"+self.ID+".jpg", self.img)
+
+
+
+class imageVisualizer_temp(object):
+	def __init__(self, ID, num_labels=5):
+		self.ID = ID
+		# self.img = mpimg.imread(str('./images/'+ ID + '.jpg'))
+		self.img = cv2.imread(str('./data/task1train_pro/'+ ID + '.jpg'))
+		self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
+
+		self.num_labels = num_labels
+		self.labels = ["UNKNOW", "COMPANY", "DATE", "ADDRESS", "TOTAL"]
+		self.color = ['k', 'r', 'g', 'b', 'c']  # respectively for unknown, company, date, address, total
+		self.textlines = []
+		self.edges = [[], [], [], [], []]
+		self.features = [[], [], [], [], []]
+		self.__get_textline_list()
+		self.__get_feature_list()
+
+
+	def __get_textline_list(self):
+		file = open('./data/task1train_pro/'+self.ID + '.txt', 'r')
+		lines = file.readlines()
+		for line in lines:
+			splited = line.split(',')
+			coors = splited[:8]
+			n_points = len(coors) / 2
+			points = []
+			for k in range(int(n_points)):
+				points.append(Point(float(coors[2 * k]), float(coors[2 * k + 1])))
+			self.textlines.append(Textline(points))
+
+	def __get_feature_list(self):
+		with open('./bow/docs.json', 'r') as fp:
+			docs = json.load(fp)
+		vectorizer = CountVectorizer(max_features=600)
+		vectorizer.fit(docs)
+		self.vocab = vectorizer.get_feature_names()
+
+	def add_edge(self, label, edge):
+		self.edges[label].append(edge)
+
+	def add_feature(self, label, feature_id):
+		self.features[label].append(feature_id)
+
+	def draw_important_box(self, indeces, labels):
+		for i in range(len(indeces)):
+			self.textlines[indeces[i]].draw_box(color=self.color[labels[i]])
+
+	def draw_edges(self):
+		plt.imshow(self.img)
+		for label in range(self.num_labels):
+			for edge in self.edges[label]:
+				draw_line(self.textlines[edge[0]].center, self.textlines[edge[1]].center, color=self.color[label])
+
+	def show(self):
+		plt.show()
+		for label in range(1, self.num_labels):
+			all = ""
+			for feature_id in self.features[label]:
+				all = all + self.vocab[feature_id] + ", "
+			print("Features strongly influenced " + self.labels[label] + ": " + all)
