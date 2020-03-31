@@ -1,6 +1,30 @@
 import torch
 import cv2
 import torchvision
+import json
+import Levenshtein
+
+
+def levenshtetin(x: str):
+    with open('data/word_bag.json') as f:
+        bow = json.load(f)
+
+    words = x.split(' ')
+    processed_words = []
+
+    for word in words:
+        word = ''.join(filter(lambda x: str.isdigit(x) or str.isalpha(x), word))
+        if word == '':
+            continue
+        word = word.lower()
+        distance = [Levenshtein.distance(word, bag_word) for bag_word in bow]
+        closest = distance.index(min(distance))
+        if distance[closest] > (len(bow[closest]) // 2):
+            processed_words.append(word)
+        else:
+            processed_words.append(bow[closest])
+
+    return ' '.join(processed_words)
 
 
 characters = ' !"#$%&\'()*+-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`lr{|}~·'
@@ -56,5 +80,7 @@ def ocr(model, x):
     with torch.no_grad():
         out = model(x, torch.tensor(x.shape[3:], dtype=torch.int64))[0]
     text = decode(out)
+
+    text = levenshtetin(text)
 
     return text
