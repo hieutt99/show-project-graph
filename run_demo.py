@@ -72,7 +72,7 @@ def layout_ocr(img_folder, out_folder='part1_output'):
 
 # ===============================================================================
 print("Layout - OCR ... ")
-layout_ocr(img_folder, layout_ocr_folder)
+# layout_ocr(img_folder, layout_ocr_folder)	
 print("Organizing ... ")
 list_files = sorted(os.listdir(layout_ocr_folder))
 print(list_files)
@@ -130,9 +130,9 @@ def process_image(image, pos, label):
 # image = cv2.imread('./images/'+list_images[3])
 # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-# s, pos = get_page_demo(list_files[3])
-# for i in s:
-# 	print(i)
+s, pos = get_page_demo(list_files[2])
+for i in s:
+	print(i)
 
 # image = process_image(image, pos, prediction)
 # plt.imshow(image)

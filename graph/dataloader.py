@@ -267,10 +267,10 @@ class demo_preprocess(Dataset):
 
 		centers = create_center(pos)
 		A = create_adj_matrix(centers, pos)
-		for i in V:
-			for j in i:
-				print(j, end = "")
-			print()
+		# for i in V:
+		# 	for j in i:
+		# 		print(j, end = "")
+		# 	print()
 
 
 		sample = {'VA':[V, A]}
