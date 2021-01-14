@@ -1,0 +1,11 @@
+bow/
+crnn/
+data/
+explainer/
+images/
+part1_output/
+unet/
+weights/
+model12.pth.tar/
+*.png
+!output1.png
